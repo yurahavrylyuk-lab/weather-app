@@ -1,10 +1,12 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from sqlmodel import Session, select
 
 from auth import hash_password
-from database import get_session
+from database import create_db_and_tables, get_session
 from models import User, UserCreate, UserPublic
 
 from aviation import (
@@ -17,7 +19,13 @@ from aviation import (
     build_agl_winds,
     build_freezing_level
 )
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
