@@ -190,9 +190,9 @@ searchForm.addEventListener("submit", async (event) => {
 
 
     try {
-        const response = await fetch(
-            `http://127.0.0.1:8000/api/weather?city=${encodeURIComponent(city)}`
-        );
+      const response = await fetch(
+          `/api/weather?city=${encodeURIComponent(city)}`
+      );
 
 
         // Handle HTTP errors
