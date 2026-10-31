@@ -113,7 +113,10 @@ def read_current_user(
 
 
 @app.get("/api/weather")
-def get_weather(city: str):
+def get_weather(
+    city: str,
+    current_user: User = Depends(get_current_user)
+):
 
     # STEP 1: Convert city name into coordinates
 
