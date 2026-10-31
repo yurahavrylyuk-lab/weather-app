@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>Weather App</title>
 
     <link rel="stylesheet" href="style.css">
@@ -10,203 +14,541 @@
 
 <body>
 
+    <header class="site-header">
+        <div class="site-brand">
+            Weather App
+        </div>
+
+        <div class="account-menu">
+            <button
+                type="button"
+                id="account-button"
+                aria-expanded="false"
+            >
+                Account ▾
+            </button>
+
+            <div
+                id="account-dropdown"
+                class="account-dropdown"
+                hidden
+            >
+                <div id="guest-account-actions">
+                    <p class="account-message">
+                        Sign in to save your home city
+                        and see it automatically when you return.
+                    </p>
+
+                    <button
+                        type="button"
+                        id="open-login-button"
+                        class="account-action"
+                    >
+                        Log in
+                    </button>
+
+                    <button
+                        type="button"
+                        id="open-register-button"
+                        class="account-action secondary"
+                    >
+                        Register
+                    </button>
+                </div>
+
+                <div
+                    id="user-account-actions"
+                    hidden
+                >
+                    <p
+                        id="account-username"
+                        class="account-username"
+                    >
+                        User
+                    </p>
+
+                    <button
+                        type="button"
+                        id="open-profile-button"
+                        class="account-action"
+                    >
+                        Profile settings
+                    </button>
+
+                    <button
+                        type="button"
+                        id="logout-button"
+                        class="account-action secondary"
+                    >
+                        Log out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+
     <main>
 
+        <section id="landing-intro">
+            <h1>Find Your Weather</h1>
+
+            <p>
+                Search any city for current weather,
+                aviation conditions and METAR information.
+            </p>
+        </section>
+
+
         <section id="search-section">
+
             <form id="search-form">
                 <input
                     type="text"
                     id="city-input"
-                    placeholder="Search city..."
+                    placeholder="Search for a city..."
+                    autocomplete="off"
                     required
                 >
 
-                <button type="submit" id="search-button">
+                <button
+                    type="submit"
+                    id="search-button"
+                >
                     Search
                 </button>
             </form>
 
-            <p id="status-message" aria-live="polite"></p>
-        </section>
-
-
-        <section id="weather-section">
-            <h1 id="city-name">Warsaw</h1>
-            <p id="country-name">Poland</p>
-
-            <div id="weather-hero">
-                <div id="weather-icon">☁︎</div>
-
-                <div>
-                    <div id="temperature">--°C</div>
-                    <div id="weather-description">--</div>
-                </div>
-            </div>
-
-            <div id="general-weather-details">
-                <div class="weather-detail-card">
-                    <span class="weather-detail-label">Feels like</span>
-                    <span id="apparent-temperature">--°C</span>
-                </div>
-
-                <div class="weather-detail-card">
-                    <span class="weather-detail-label">Humidity</span>
-                    <span id="humidity">--%</span>
-                </div>
-
-                <div class="weather-detail-card">
-                    <span class="weather-detail-label">Wind</span>
-                    <span id="wind-speed">-- km/h</span>
-                </div>
-            </div>
-        </section>
-
-
-        <section id="aviation-section">
-
-            <h2>Aviation Weather</h2>
-
-            <div id="aviation-summary">
-                <div class="aviation-summary-card">
-                    <span class="aviation-label">Flight category</span>
-                    <span id="flight-category">--</span>
-                </div>
-
-                <div class="aviation-summary-card">
-                    <span class="aviation-label">Visibility</span>
-                    <span id="visibility">--</span>
-                </div>
-
-                <div class="aviation-summary-card">
-                    <span class="aviation-label">Ceiling</span>
-                    <span id="ceiling">--</span>
-                </div>
-
-                <div class="aviation-summary-card">
-                    <span class="aviation-label">Freezing level</span>
-                    <span id="freezing-level">--</span>
-                </div>
-            </div>
-
-
-            <div id="winds-aloft">
-
-                <h3>Winds Aloft</h3>
-
-                <p>
-                    1000 ft AGL:
-                    <span id="wind-1000">321° / 5.2 kt</span>
-                </p>
-
-                <p>
-                    2000 ft AGL:
-                    <span id="wind-2000">335° / 5.7 kt</span>
-                </p>
-
-                <p>
-                    3000 ft AGL:
-                    <span id="wind-3000">343° / 5.7 kt</span>
-                </p>
-
-                <p>
-                    5000 ft AGL:
-                    <span id="wind-5000">340° / 5.8 kt</span>
-                </p>
-
-            </div>
+            <p
+                id="status-message"
+                aria-live="polite"
+            ></p>
 
         </section>
 
 
-        <section id="metar-section">
+        <div id="weather-results" hidden>
 
-            <details>
+            <section id="weather-section">
 
-                <summary>
-                    METAR —
-                    <span id="metar-station">EPWA</span>
-                </summary>
+                <h1 id="city-name">--</h1>
+
+                <p id="country-name"></p>
+
+                <div id="weather-hero">
+
+                    <div id="weather-icon">
+                        ☁︎
+                    </div>
+
+                    <div>
+                        <div id="temperature">
+                            --°C
+                        </div>
+
+                        <div id="weather-description">
+                            --
+                        </div>
+                    </div>
+
+                </div>
 
 
-                <div id="metar-details">
+                <div id="general-weather-details">
 
-                    <p id="metar-station-name">
-                        Warsaw/Chopin Airport
-                    </p>
-
-                    <p>
-                        Distance:
-                        <span id="metar-distance">8.2 km</span>
-                    </p>
-
-                    <p>
-                        Observed:
-                        <span id="metar-time">--</span>
-                    </p>
-
-                    <p>
-                        Wind:
-                        <span id="metar-wind">330° / 6 kt</span>
-                    </p>
-
-                    <p>
-                        Visibility:
-                        <span id="metar-visibility">
-                            10 km or more
+                    <div class="weather-detail-card">
+                        <span class="weather-detail-label">
+                            Feels like
                         </span>
-                    </p>
 
-                    <p>
-                        Clouds:
-                        <span id="metar-clouds">
-                            BKN 1900 ft AGL
+                        <span id="apparent-temperature">
+                            --°C
                         </span>
-                    </p>
+                    </div>
 
-                    <p>
-                        Ceiling:
-                        <span id="metar-ceiling">
-                            1900 ft AGL
+
+                    <div class="weather-detail-card">
+                        <span class="weather-detail-label">
+                            Humidity
                         </span>
-                    </p>
 
-                    <p>
-                        Temperature:
-                        <span id="metar-temperature">8°C</span>
-                    </p>
-
-                    <p>
-                        Dew point:
-                        <span id="metar-dewpoint">5°C</span>
-                    </p>
-
-                    <p>
-                        QNH:
-                        <span id="metar-qnh">1027 hPa</span>
-                    </p>
-
-                    <p>
-                        Phenomena:
-                        <span id="metar-phenomena">None</span>
-                    </p>
+                        <span id="humidity">
+                            --%
+                        </span>
+                    </div>
 
 
-                    <p>Raw METAR:</p>
+                    <div class="weather-detail-card">
+                        <span class="weather-detail-label">
+                            Wind
+                        </span>
 
-                    <code id="raw-metar">
-                        METAR EPWA 290930Z 33006KT 9999 BKN019 08/05 Q1027 NOSIG
-                    </code>
+                        <span id="wind-speed">
+                            -- km/h
+                        </span>
+                    </div>
 
                 </div>
 
-            </details>
+            </section>
 
-        </section>
+
+            <section id="aviation-section">
+
+                <h2>Aviation Weather</h2>
+
+
+                <div id="aviation-summary">
+
+                    <div class="aviation-summary-card">
+                        <span class="aviation-label">
+                            Flight category
+                        </span>
+
+                        <span id="flight-category">
+                            --
+                        </span>
+                    </div>
+
+
+                    <div class="aviation-summary-card">
+                        <span class="aviation-label">
+                            Visibility
+                        </span>
+
+                        <span id="visibility">
+                            --
+                        </span>
+                    </div>
+
+
+                    <div class="aviation-summary-card">
+                        <span class="aviation-label">
+                            Ceiling
+                        </span>
+
+                        <span id="ceiling">
+                            --
+                        </span>
+                    </div>
+
+
+                    <div class="aviation-summary-card">
+                        <span class="aviation-label">
+                            Freezing level
+                        </span>
+
+                        <span id="freezing-level">
+                            --
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div id="winds-aloft">
+
+                    <h3>Winds Aloft</h3>
+
+                    <p>
+                        1000 ft AGL:
+                        <span id="wind-1000">--</span>
+                    </p>
+
+                    <p>
+                        2000 ft AGL:
+                        <span id="wind-2000">--</span>
+                    </p>
+
+                    <p>
+                        3000 ft AGL:
+                        <span id="wind-3000">--</span>
+                    </p>
+
+                    <p>
+                        5000 ft AGL:
+                        <span id="wind-5000">--</span>
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <section id="metar-section">
+
+                <details>
+
+                    <summary>
+                        METAR —
+                        <span id="metar-station">
+                            --
+                        </span>
+                    </summary>
+
+
+                    <div id="metar-details">
+
+                        <p id="metar-station-name">
+                            --
+                        </p>
+
+                        <p>
+                            Distance:
+                            <span id="metar-distance">--</span>
+                        </p>
+
+                        <p>
+                            Observed:
+                            <span id="metar-time">--</span>
+                        </p>
+
+                        <p>
+                            Wind:
+                            <span id="metar-wind">--</span>
+                        </p>
+
+                        <p>
+                            Visibility:
+                            <span id="metar-visibility">--</span>
+                        </p>
+
+                        <p>
+                            Clouds:
+                            <span id="metar-clouds">--</span>
+                        </p>
+
+                        <p>
+                            Ceiling:
+                            <span id="metar-ceiling">--</span>
+                        </p>
+
+                        <p>
+                            Temperature:
+                            <span id="metar-temperature">--</span>
+                        </p>
+
+                        <p>
+                            Dew point:
+                            <span id="metar-dewpoint">--</span>
+                        </p>
+
+                        <p>
+                            QNH:
+                            <span id="metar-qnh">--</span>
+                        </p>
+
+                        <p>
+                            Phenomena:
+                            <span id="metar-phenomena">--</span>
+                        </p>
+
+                        <p>
+                            Raw METAR:
+                        </p>
+
+                        <code id="raw-metar">
+                            --
+                        </code>
+
+                    </div>
+
+                </details>
+
+            </section>
+
+        </div>
 
     </main>
 
 
+    <dialog id="auth-dialog">
+
+        <button
+            type="button"
+            id="close-auth-dialog"
+            class="dialog-close"
+            aria-label="Close"
+        >
+            ×
+        </button>
+
+
+        <section
+            id="login-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Log in</h2>
+
+            <p class="auth-description">
+                Log in to load your saved home city automatically.
+            </p>
+
+            <form id="login-form">
+
+                <label>
+                    Username
+
+                    <input
+                        type="text"
+                        id="login-username"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Password
+
+                    <input
+                        type="password"
+                        id="login-password"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Log in
+                </button>
+
+            </form>
+
+            <p
+                id="login-message"
+                class="form-message"
+            ></p>
+
+            <button
+                type="button"
+                id="switch-to-register"
+                class="text-button"
+            >
+                Don't have an account? Register
+            </button>
+
+        </section>
+
+
+        <section
+            id="register-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Create account</h2>
+
+            <p class="auth-description">
+                Choose a home city.
+                Its weather will become your personalized homepage.
+            </p>
+
+            <form id="register-form">
+
+                <label>
+                    Username
+
+                    <input
+                        type="text"
+                        id="register-username"
+                        minlength="3"
+                        maxlength="50"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Password
+
+                    <input
+                        type="password"
+                        id="register-password"
+                        minlength="8"
+                        maxlength="128"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Home city
+
+                    <input
+                        type="text"
+                        id="register-city"
+                        maxlength="100"
+                        placeholder="e.g. Warsaw"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Create account
+                </button>
+
+            </form>
+
+            <p
+                id="register-message"
+                class="form-message"
+            ></p>
+
+            <button
+                type="button"
+                id="switch-to-login"
+                class="text-button"
+            >
+                Already have an account? Log in
+            </button>
+
+        </section>
+
+
+        <section
+            id="profile-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Profile settings</h2>
+
+            <p class="auth-description">
+                Change the city that appears automatically
+                when you open Weather App.
+            </p>
+
+            <p>
+                Signed in as
+                <strong id="profile-username">--</strong>
+            </p>
+
+            <form id="profile-form">
+
+                <label>
+                    Home city
+
+                    <input
+                        type="text"
+                        id="profile-city"
+                        maxlength="100"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Save home city
+                </button>
+
+            </form>
+
+            <p
+                id="profile-message"
+                class="form-message"
+            ></p>
+
+        </section>
+
+    </dialog>
+
+
     <script src="script.js"></script>
+    <script src="auth.js"></script>
 
 </body>
 </html>

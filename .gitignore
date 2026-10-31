@@ -1,20 +1,3 @@
-# macOS
-.DS_Store
-
-# Python
-__pycache__/
-*.py[cod]
-backend/.venv/
-.pytest_cache/
-
-# Environment variables
-.env
-.env.*
-!.env.example
-
-# IDE
-.vscode/
-.idea/
-
-# Logs
-*.log
+.vercel/
+backend/.vercel/
+backend/weather.db

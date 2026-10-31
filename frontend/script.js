@@ -172,6 +172,8 @@ const searchForm = document.getElementById("search-form");
 const cityInput = document.getElementById("city-input");
 const searchButton = document.getElementById("search-button");
 const statusMessage = document.getElementById("status-message");
+const weatherResults = document.getElementById("weather-results");
+const landingIntro = document.getElementById("landing-intro");
 
 
 searchForm.addEventListener("submit", async (event) => {
@@ -206,6 +208,9 @@ searchForm.addEventListener("submit", async (event) => {
 
 
         const data = await response.json();
+
+        weatherResults.hidden = false;
+        landingIntro.hidden = true;
 
         const backgroundClass = getBackgroundClass(data);
         applyWeatherBackground(backgroundClass);
@@ -513,5 +518,3 @@ searchForm.addEventListener("submit", async (event) => {
         searchButton.disabled = false;
     }
 });
-
-applyWeatherBackground("weather-ovc");
