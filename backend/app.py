@@ -1,6 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
+from sqlmodel import Session, select
+
+from auth import hash_password
+from database import get_session
+from models import User, UserCreate, UserPublic
 
 from aviation import (
     fetch_nearby_metars,
@@ -29,6 +34,37 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {"message": "Weather API is running"}
+
+
+@app.post(
+    "/api/register",
+    response_model=UserPublic,
+    status_code=201
+)
+def register_user(
+    user_data: UserCreate,
+    session: Session = Depends(get_session)
+):
+    existing_user = session.exec(
+        select(User).where(User.username == user_data.username)
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=409,
+            detail="Username already registered"
+        )
+
+    user = User(
+        username=user_data.username,
+        hashed_password=hash_password(user_data.password)
+    )
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return user
 
 
 @app.get("/api/weather")
