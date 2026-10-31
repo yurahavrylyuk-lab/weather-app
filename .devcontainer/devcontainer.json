@@ -1,0 +1,37 @@
+{
+    "name": "Weather App Dev Container",
+
+    "image": "mcr.microsoft.com/devcontainers/python:3.14-bookworm",
+
+    "runArgs": [
+        "--name",
+        "weather-app-dev"
+    ],
+
+    "forwardPorts": [
+        8000,
+        5500
+    ],
+
+    "portsAttributes": {
+        "8000": {
+            "label": "FastAPI Backend"
+        },
+        "5500": {
+            "label": "Frontend"
+        }
+    },
+
+    "postCreateCommand": "python -m pip install -r backend/requirements.txt",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "anysphere.cursorpyright"
+            ]
+        }
+    },
+
+    "remoteUser": "vscode"
+}
