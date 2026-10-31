@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 import httpx
 from sqlmodel import Session, select
 
-from auth import authenticate_user, create_access_token, hash_password
+from auth import authenticate_user, create_access_token, get_current_user, hash_password
 from database import create_db_and_tables, get_session
 from models import User, UserCreate, UserPublic
 
@@ -100,6 +100,16 @@ def login_for_access_token(
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+
+@app.get(
+    "/api/users/me",
+    response_model=UserPublic
+)
+def read_current_user(
+    current_user: User = Depends(get_current_user)
+):
+    return current_user
 
 
 @app.get("/api/weather")
