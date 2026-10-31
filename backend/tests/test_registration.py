@@ -27,7 +27,8 @@ def test_register_creates_user_with_hashed_password(tmp_path):
             "/api/register",
             json={
                 "username": "yura",
-                "password": "StrongPassword123"
+                "password": "StrongPassword123",
+                "preferred_city": "Warsaw"
             }
         )
 
@@ -37,6 +38,7 @@ def test_register_creates_user_with_hashed_password(tmp_path):
 
         assert data["username"] == "yura"
         assert data["is_active"] is True
+        assert data["preferred_city"] == "Warsaw"
         assert "password" not in data
         assert "hashed_password" not in data
 
@@ -45,6 +47,7 @@ def test_register_creates_user_with_hashed_password(tmp_path):
                 select(User).where(User.username == "yura")
             ).one()
 
+            assert user.preferred_city == "Warsaw"
             assert user.hashed_password != "StrongPassword123"
             assert verify_password(
                 "StrongPassword123",
@@ -75,7 +78,8 @@ def test_register_rejects_duplicate_username(tmp_path):
             "/api/register",
             json={
                 "username": "yura",
-                "password": "StrongPassword123"
+                "password": "StrongPassword123",
+                "preferred_city": "Warsaw"
             }
         )
 
@@ -83,7 +87,8 @@ def test_register_rejects_duplicate_username(tmp_path):
             "/api/register",
             json={
                 "username": "yura",
-                "password": "AnotherPassword456"
+                "password": "AnotherPassword456",
+                "preferred_city": "Krakow"
             }
         )
 
@@ -117,7 +122,8 @@ def test_register_rejects_short_username(tmp_path):
             "/api/register",
             json={
                 "username": "yu",
-                "password": "StrongPassword123"
+                "password": "StrongPassword123",
+                "preferred_city": "Warsaw"
             }
         )
 
@@ -147,7 +153,8 @@ def test_register_rejects_short_password(tmp_path):
             "/api/register",
             json={
                 "username": "yura",
-                "password": "short"
+                "password": "short",
+                "preferred_city": "Warsaw"
             }
         )
 

@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from auth import authenticate_user, create_access_token, get_current_user, hash_password
 from database import create_db_and_tables, get_session
-from models import User, UserCreate, UserPublic
+from models import User, UserCreate, UserPublic, UserUpdate
 
 from aviation import (
     fetch_nearby_metars,
@@ -66,7 +66,8 @@ def register_user(
 
     user = User(
         username=user_data.username,
-        hashed_password=hash_password(user_data.password)
+        hashed_password=hash_password(user_data.password),
+        preferred_city=user_data.preferred_city
     )
 
     session.add(user)
@@ -112,11 +113,26 @@ def read_current_user(
     return current_user
 
 
-@app.get("/api/weather")
-def get_weather(
-    city: str,
-    current_user: User = Depends(get_current_user)
+@app.patch(
+    "/api/users/me",
+    response_model=UserPublic
+)
+def update_current_user(
+    user_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
 ):
+    current_user.preferred_city = user_data.preferred_city
+
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    return current_user
+
+
+@app.get("/api/weather")
+def get_weather(city: str):
 
     # STEP 1: Convert city name into coordinates
 

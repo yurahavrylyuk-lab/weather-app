@@ -23,7 +23,8 @@ def test_token_endpoint_returns_bearer_jwt(tmp_path, monkeypatch):
     with Session(test_engine) as session:
         user = User(
             username="yura",
-            hashed_password=hash_password("StrongPassword123")
+            hashed_password=hash_password("StrongPassword123"),
+            preferred_city="Warsaw"
         )
         session.add(user)
         session.commit()

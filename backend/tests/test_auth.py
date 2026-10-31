@@ -41,7 +41,8 @@ def test_authenticate_user_accepts_correct_credentials(tmp_path):
     with Session(test_engine) as session:
         user = User(
             username="yura",
-            hashed_password=hash_password("StrongPassword123")
+            hashed_password=hash_password("StrongPassword123"),
+            preferred_city="Warsaw"
         )
         session.add(user)
         session.commit()
