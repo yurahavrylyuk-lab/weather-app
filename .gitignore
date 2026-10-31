@@ -1,3 +1,7 @@
 .vercel/
 backend/.vercel/
 backend/weather.db
+.env
+.env.*
+.vercel
+.env*
