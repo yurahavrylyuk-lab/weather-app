@@ -2,10 +2,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
 import httpx
 from sqlmodel import Session, select
 
-from auth import hash_password
+from auth import authenticate_user, create_access_token, hash_password
 from database import create_db_and_tables, get_session
 from models import User, UserCreate, UserPublic
 
@@ -73,6 +74,32 @@ def register_user(
     session.refresh(user)
 
     return user
+
+
+@app.post("/api/token")
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_session)
+):
+    user = authenticate_user(
+        session,
+        form_data.username,
+        form_data.password
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    access_token = create_access_token(user.username)
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
 
 @app.get("/api/weather")
