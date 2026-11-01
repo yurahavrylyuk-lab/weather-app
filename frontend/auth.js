@@ -45,6 +45,82 @@ function clearAccessToken() {
 }
 
 
+async function refreshAccessToken() {
+    const response = await fetch(
+        "/api/refresh",
+        {
+            method: "POST",
+            credentials: "include"
+        }
+    );
+
+    if (!response.ok) {
+        clearAccessToken();
+        return null;
+    }
+
+    const data = await response.json();
+    saveAccessToken(data.access_token);
+
+    return data.access_token;
+}
+
+
+async function authenticatedFetch(url, options = {}) {
+    let token = getAccessToken();
+
+    if (!token) {
+        token = await refreshAccessToken();
+
+        if (!token) {
+            return null;
+        }
+    }
+
+    const headers = new Headers(
+        options.headers || {}
+    );
+
+    headers.set(
+        "Authorization",
+        `Bearer ${token}`
+    );
+
+    let response = await fetch(
+        url,
+        {
+            ...options,
+            headers,
+            credentials: "include"
+        }
+    );
+
+    if (response.status === 401) {
+        token = await refreshAccessToken();
+
+        if (!token) {
+            return response;
+        }
+
+        headers.set(
+            "Authorization",
+            `Bearer ${token}`
+        );
+
+        response = await fetch(
+            url,
+            {
+                ...options,
+                headers,
+                credentials: "include"
+            }
+        );
+    }
+
+    return response;
+}
+
+
 function closeAccountDropdown() {
     accountDropdown.hidden = true;
     accountButton.setAttribute(
@@ -123,23 +199,11 @@ function showPreferredCity(city) {
 
 
 async function fetchCurrentUser() {
-    const token = getAccessToken();
-
-    if (!token) {
-        showGuestAccount();
-        return null;
-    }
-
-    const response = await fetch(
-        "/api/users/me",
-        {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        }
+    const response = await authenticatedFetch(
+        "/api/users/me"
     );
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         clearAccessToken();
         showGuestAccount();
         return null;
@@ -167,7 +231,8 @@ async function login(username, password) {
                 "Content-Type":
                     "application/x-www-form-urlencoded"
             },
-            body: formData
+            body: formData,
+            credentials: "include"
         }
     );
 
@@ -283,10 +348,20 @@ document
     .getElementById("logout-button")
     .addEventListener(
         "click",
-        () => {
-            clearAccessToken();
-            showGuestAccount();
-            closeAccountDropdown();
+        async () => {
+            try {
+                await fetch(
+                    "/api/logout",
+                    {
+                        method: "POST",
+                        credentials: "include"
+                    }
+                );
+            } finally {
+                clearAccessToken();
+                showGuestAccount();
+                closeAccountDropdown();
+            }
         }
     );
 
@@ -437,14 +512,6 @@ document
         async (event) => {
             event.preventDefault();
 
-            const token = getAccessToken();
-
-            if (!token) {
-                showGuestAccount();
-                closeAuthDialog();
-                return;
-            }
-
             const message =
                 document.getElementById(
                     "profile-message"
@@ -459,22 +526,21 @@ document
                 "Saving...";
 
             try {
-                const response = await fetch(
-                    "/api/users/me",
-                    {
-                        method: "PATCH",
-                        headers: {
-                            Authorization:
-                                `Bearer ${token}`,
-                            "Content-Type":
-                                "application/json"
-                        },
-                        body: JSON.stringify({
-                            preferred_city:
-                                preferredCity
-                        })
-                    }
-                );
+                const response =
+                    await authenticatedFetch(
+                        "/api/users/me",
+                        {
+                            method: "PATCH",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body: JSON.stringify({
+                                preferred_city:
+                                    preferredCity
+                            })
+                        }
+                    );
 
                 if (!response.ok) {
                     throw new Error(

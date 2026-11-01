@@ -1,12 +1,23 @@
 from contextlib import asynccontextmanager
+import os
 
-from fastapi import Depends, FastAPI, HTTPException
+import jwt
+
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 import httpx
 from sqlmodel import Session, select
 
-from auth import authenticate_user, create_access_token, get_current_user, hash_password
+from auth import (
+    ALGORITHM,
+    REFRESH_TOKEN_EXPIRE_DAYS,
+    authenticate_user,
+    create_access_token,
+    create_refresh_token,
+    get_current_user,
+    hash_password,
+)
 from database import create_db_and_tables, get_session
 from models import User, UserCreate, UserPublic, UserUpdate
 
@@ -79,6 +90,7 @@ def register_user(
 
 @app.post("/api/token")
 def login_for_access_token(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(get_session)
 ):
@@ -96,11 +108,107 @@ def login_for_access_token(
         )
 
     access_token = create_access_token(user.username)
+    refresh_token = create_refresh_token(user.username)
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=os.getenv("VERCEL_ENV") in {"production", "preview"},
+        samesite="lax",
+        path="/api",
+    )
 
     return {
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+
+@app.post("/api/refresh")
+def refresh_access_token(
+    request: Request,
+    response: Response,
+    session: Session = Depends(get_session)
+):
+    refresh_token = request.cookies.get("refresh_token")
+
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Refresh token required"
+        )
+
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    if not secret_key:
+        raise RuntimeError("JWT_SECRET_KEY is not configured")
+
+    try:
+        payload = jwt.decode(
+            refresh_token,
+            secret_key,
+            algorithms=[ALGORITHM]
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token"
+        )
+
+    if payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token"
+        )
+
+    username = payload.get("sub")
+    if not username:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token"
+        )
+
+    user = session.exec(
+        select(User).where(User.username == username)
+    ).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token"
+        )
+
+    new_access_token = create_access_token(user.username)
+    new_refresh_token = create_refresh_token(user.username)
+
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=os.getenv("VERCEL_ENV") in {"production", "preview"},
+        samesite="lax",
+        path="/api",
+    )
+
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer"
+    }
+
+
+@app.post("/api/logout")
+def logout(response: Response):
+    response.delete_cookie(
+        key="refresh_token",
+        path="/api",
+        secure=os.getenv("VERCEL_ENV") in {"production", "preview"},
+        httponly=True,
+        samesite="lax",
+    )
+
+    return {"message": "Logged out"}
 
 
 @app.get(
