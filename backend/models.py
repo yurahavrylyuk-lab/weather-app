@@ -31,6 +31,7 @@ class AuthActionToken(SQLModel, table=True):
 
 class UserCreate(SQLModel):
     username: str = Field(min_length=3, max_length=50)
+    email: str = Field(min_length=3, max_length=320)
     password: str = Field(min_length=8, max_length=128)
     preferred_city: str = Field(min_length=1, max_length=100)
 
@@ -38,6 +39,8 @@ class UserCreate(SQLModel):
 class UserPublic(SQLModel):
     id: int
     username: str
+    email: str | None
+    email_verified: bool
     preferred_city: str
     is_active: bool
 

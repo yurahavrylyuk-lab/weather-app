@@ -17,6 +17,7 @@ from auth import (
     create_refresh_token,
     get_current_user,
     hash_password,
+    normalize_email,
 )
 from database import create_db_and_tables, get_session
 from models import User, UserCreate, UserPublic, UserUpdate
@@ -75,8 +76,22 @@ def register_user(
             detail="Username already registered"
         )
 
+    normalized_email = normalize_email(user_data.email)
+
+    existing_email = session.exec(
+        select(User).where(User.email == normalized_email)
+    ).first()
+
+    if existing_email:
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered"
+        )
+
     user = User(
         username=user_data.username,
+        email=normalized_email,
+        email_verified=False,
         hashed_password=hash_password(user_data.password),
         preferred_city=user_data.preferred_city
     )

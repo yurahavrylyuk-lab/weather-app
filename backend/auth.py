@@ -36,13 +36,23 @@ def verify_password(
     )
 
 
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
 def authenticate_user(
     session: Session,
-    username: str,
+    identifier: str,
     password: str
 ) -> User | None:
+    identifier = identifier.strip()
+    normalized_email = normalize_email(identifier)
+
     user = session.exec(
-        select(User).where(User.username == username)
+        select(User).where(
+            (User.username == identifier)
+            | (User.email == normalized_email)
+        )
     ).first()
 
     if user is None:
@@ -52,6 +62,9 @@ def authenticate_user(
         password,
         user.hashed_password
     ):
+        return None
+
+    if user.email is not None and not user.email_verified:
         return None
 
     return user
