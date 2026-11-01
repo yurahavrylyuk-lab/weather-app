@@ -34,3 +34,19 @@ def test_frontend_supports_public_weather_and_account_ui():
     assert "sessionStorage" in auth_script
     assert "preferred_city" in auth_script
     assert 'method: "PATCH"' in auth_script
+
+
+def test_frontend_supports_persistent_login():
+    auth_script = (FRONTEND / "auth.js").read_text()
+
+    assert "/api/refresh" in auth_script
+    assert "/api/logout" in auth_script
+
+    # Refresh/login/logout requests must carry the secure cookie.
+    assert 'credentials: "include"' in auth_script
+
+    # Expired access JWT should trigger silent renewal.
+    assert "response.status === 401" in auth_script
+
+    # Short-lived access JWT remains session-only.
+    assert "sessionStorage" in auth_script

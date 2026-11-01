@@ -15,6 +15,7 @@ password_hash = PasswordHash.recommended()
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="api/token"
@@ -58,25 +59,34 @@ def authenticate_user(
 
 def create_access_token(username: str) -> str:
     secret_key = os.getenv("JWT_SECRET_KEY")
-
     if not secret_key:
         raise RuntimeError("JWT_SECRET_KEY is not configured")
 
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
-
     payload = {
         "sub": username,
-        "exp": expires_at
+        "type": "access",
+        "exp": expires_at,
     }
+    return jwt.encode(payload, secret_key, algorithm=ALGORITHM)
 
-    return jwt.encode(
-        payload,
-        secret_key,
-        algorithm=ALGORITHM
+
+def create_refresh_token(username: str) -> str:
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    if not secret_key:
+        raise RuntimeError("JWT_SECRET_KEY is not configured")
+
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        days=REFRESH_TOKEN_EXPIRE_DAYS
     )
-
+    payload = {
+        "sub": username,
+        "type": "refresh",
+        "exp": expires_at,
+    }
+    return jwt.encode(payload, secret_key, algorithm=ALGORITHM)
 
 def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -100,8 +110,10 @@ def get_current_user(
             algorithms=[ALGORITHM]
         )
 
-        username = payload.get("sub")
+        if payload.get("type") != "access":
+            raise credentials_exception
 
+        username = payload.get("sub")
         if username is None:
             raise credentials_exception
 
