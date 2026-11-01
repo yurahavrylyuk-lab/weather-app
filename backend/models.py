@@ -1,12 +1,32 @@
+from datetime import datetime, timezone
+
 from sqlmodel import Field, SQLModel
 
 
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
+    email: str | None = Field(default=None, index=True, unique=True)
+    email_verified: bool = False
+    auth_version: int = 1
     hashed_password: str
     preferred_city: str
     is_active: bool = True
+
+
+class AuthActionToken(SQLModel, table=True):
+    __tablename__ = "auth_action_tokens"
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    token_hash: str = Field(index=True, unique=True)
+    purpose: str = Field(index=True)
+    target_email: str | None = None
+    expires_at: datetime
+    used_at: datetime | None = None
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 class UserCreate(SQLModel):
