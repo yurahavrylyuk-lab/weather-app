@@ -28,7 +28,7 @@ from email_service import (
     send_password_reset_email,
     send_verification_email,
 )
-from models import EmailChangeRequest, EmailRequest, EmailTokenRequest, PasswordResetConfirm, User, UserCreate, UserPublic, UserUpdate
+from models import EmailChangeRequest, EmailRequest, EmailTokenRequest, PasswordChangeRequest, PasswordResetConfirm, User, UserCreate, UserPublic, UserUpdate
 
 from aviation import (
     fetch_nearby_metars,
@@ -121,6 +121,68 @@ def register_user(
     )
 
     return user
+
+
+@app.post("/api/users/me/password")
+def change_password(
+    request: PasswordChangeRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if not verify_password(
+        request.current_password,
+        current_user.hashed_password,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Current password is incorrect",
+        )
+
+    if (
+        request.new_password
+        != request.new_password_confirmation
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="New passwords do not match",
+        )
+
+    current_user.hashed_password = hash_password(
+        request.new_password
+    )
+
+    current_user.auth_version += 1
+
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    access_token = create_access_token(
+        current_user.username,
+        auth_version=current_user.auth_version,
+    )
+
+    refresh_token = create_refresh_token(
+        current_user.username,
+        auth_version=current_user.auth_version,
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=os.getenv("VERCEL_ENV")
+        in {"production", "preview"},
+        samesite="lax",
+        path="/api",
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+    }
 
 
 @app.post("/api/users/me/email")

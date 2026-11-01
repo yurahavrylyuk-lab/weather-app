@@ -365,6 +365,10 @@ document
                 "change-email-message"
             ).textContent = "";
 
+            document.getElementById(
+                "change-password-message"
+            ).textContent = "";
+
             openAuthPanel(profilePanel);
         }
     );
@@ -821,6 +825,103 @@ document
 
                 message.textContent =
                     "Check your new email to confirm the change.";
+
+            } catch (error) {
+                message.textContent =
+                    error.message;
+            }
+        }
+    );
+
+
+document
+    .getElementById("change-password-form")
+    .addEventListener(
+        "submit",
+        async (event) => {
+            event.preventDefault();
+
+            const currentPassword =
+                document.getElementById(
+                    "change-password-current"
+                ).value;
+
+            const newPassword =
+                document.getElementById(
+                    "change-password-new"
+                ).value;
+
+            const confirmation =
+                document.getElementById(
+                    "change-password-confirm"
+                ).value;
+
+            const message =
+                document.getElementById(
+                    "change-password-message"
+                );
+
+            if (newPassword !== confirmation) {
+                message.textContent =
+                    "Passwords do not match.";
+                return;
+            }
+
+            message.textContent =
+                "Changing password...";
+
+            try {
+                const response =
+                    await authenticatedFetch(
+                        "/api/users/me/password",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body: JSON.stringify({
+                                current_password:
+                                    currentPassword,
+                                new_password:
+                                    newPassword,
+                                new_password_confirmation:
+                                    confirmation
+                            })
+                        }
+                    );
+
+                if (!response) {
+                    throw new Error(
+                        "Your session has expired. Please log in again."
+                    );
+                }
+
+                if (!response.ok) {
+                    if (response.status === 400) {
+                        throw new Error(
+                            "Current password is incorrect."
+                        );
+                    }
+
+                    throw new Error(
+                        "Could not change password."
+                    );
+                }
+
+                const data =
+                    await response.json();
+
+                saveAccessToken(
+                    data.access_token
+                );
+
+                document.getElementById(
+                    "change-password-form"
+                ).reset();
+
+                message.textContent =
+                    "Password changed successfully.";
 
             } catch (error) {
                 message.textContent =

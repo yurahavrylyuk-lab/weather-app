@@ -66,3 +66,10 @@ class PasswordResetConfirm(SQLModel):
 class EmailChangeRequest(SQLModel):
     new_email: str = Field(min_length=3, max_length=320)
     current_password: str = Field(min_length=1, max_length=128)
+
+
+
+class PasswordChangeRequest(SQLModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+    new_password_confirmation: str = Field(min_length=8, max_length=128)

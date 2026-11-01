@@ -137,3 +137,18 @@ def test_frontend_handles_email_change_confirmation_link():
     assert "change_email_token" in auth_script
     assert "/api/email/confirm-change" in auth_script
     assert "history.replaceState" in auth_script
+
+
+def test_frontend_supports_password_change_in_profile():
+    index = (FRONTEND / "index.html").read_text()
+    auth_script = (FRONTEND / "auth.js").read_text()
+
+    assert 'id="change-password-form"' in index
+    assert 'id="change-password-current"' in index
+    assert 'id="change-password-new"' in index
+    assert 'id="change-password-confirm"' in index
+    assert 'id="change-password-message"' in index
+
+    assert "/api/users/me/password" in auth_script
+    assert "change-password-form" in auth_script
+    assert "saveAccessToken" in auth_script
