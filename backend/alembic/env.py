@@ -1,7 +1,8 @@
+import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, pool
 from sqlmodel import SQLModel
 
 from models import AuthActionToken, User
@@ -15,11 +16,20 @@ if config.config_file_name is not None:
 target_metadata = SQLModel.metadata
 
 
-def run_migrations_offline():
-    url = config.get_main_option("sqlalchemy.url")
+def get_database_url():
+    url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
 
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+    return url
+
+
+def run_migrations_offline():
     context.configure(
-        url=url,
+        url=get_database_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -30,9 +40,8 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
+    connectable = create_engine(
+        get_database_url(),
         poolclass=pool.NullPool,
     )
 
