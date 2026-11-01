@@ -122,8 +122,14 @@ def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"}
         )
 
-    access_token = create_access_token(user.username)
-    refresh_token = create_refresh_token(user.username)
+    access_token = create_access_token(
+        user.username,
+        auth_version=user.auth_version,
+    )
+    refresh_token = create_refresh_token(
+        user.username,
+        auth_version=user.auth_version,
+    )
 
     response.set_cookie(
         key="refresh_token",
@@ -178,7 +184,9 @@ def refresh_access_token(
         )
 
     username = payload.get("sub")
-    if not username:
+    auth_version = payload.get("auth_version")
+
+    if not username or type(auth_version) is not int:
         raise HTTPException(
             status_code=401,
             detail="Invalid refresh token"
@@ -194,8 +202,20 @@ def refresh_access_token(
             detail="Invalid refresh token"
         )
 
-    new_access_token = create_access_token(user.username)
-    new_refresh_token = create_refresh_token(user.username)
+    if user.auth_version != auth_version:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token"
+        )
+
+    new_access_token = create_access_token(
+        user.username,
+        auth_version=user.auth_version,
+    )
+    new_refresh_token = create_refresh_token(
+        user.username,
+        auth_version=user.auth_version,
+    )
 
     response.set_cookie(
         key="refresh_token",

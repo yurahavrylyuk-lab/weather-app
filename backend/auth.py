@@ -70,7 +70,10 @@ def authenticate_user(
     return user
 
 
-def create_access_token(username: str) -> str:
+def create_access_token(
+    username: str,
+    auth_version: int = 1
+) -> str:
     secret_key = os.getenv("JWT_SECRET_KEY")
     if not secret_key:
         raise RuntimeError("JWT_SECRET_KEY is not configured")
@@ -81,12 +84,16 @@ def create_access_token(username: str) -> str:
     payload = {
         "sub": username,
         "type": "access",
+        "auth_version": auth_version,
         "exp": expires_at,
     }
     return jwt.encode(payload, secret_key, algorithm=ALGORITHM)
 
 
-def create_refresh_token(username: str) -> str:
+def create_refresh_token(
+    username: str,
+    auth_version: int = 1
+) -> str:
     secret_key = os.getenv("JWT_SECRET_KEY")
     if not secret_key:
         raise RuntimeError("JWT_SECRET_KEY is not configured")
@@ -97,6 +104,7 @@ def create_refresh_token(username: str) -> str:
     payload = {
         "sub": username,
         "type": "refresh",
+        "auth_version": auth_version,
         "exp": expires_at,
     }
     return jwt.encode(payload, secret_key, algorithm=ALGORITHM)
@@ -127,7 +135,12 @@ def get_current_user(
             raise credentials_exception
 
         username = payload.get("sub")
+        auth_version = payload.get("auth_version")
+
         if username is None:
+            raise credentials_exception
+
+        if type(auth_version) is not int:
             raise credentials_exception
 
     except jwt.InvalidTokenError:
@@ -138,6 +151,9 @@ def get_current_user(
     ).first()
 
     if user is None:
+        raise credentials_exception
+
+    if user.auth_version != auth_version:
         raise credentials_exception
 
     return user
