@@ -388,7 +388,7 @@
             <form id="login-form">
 
                 <label>
-                    Username
+                    Username or email
 
                     <input
                         type="text"
@@ -456,6 +456,18 @@
                 </label>
 
                 <label>
+                    Email
+
+                    <input
+                        type="email"
+                        id="register-email"
+                        maxlength="320"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <label>
                     Password
 
                     <input
@@ -496,6 +508,46 @@
                 class="text-button"
             >
                 Already have an account? Log in
+            </button>
+
+        </section>
+
+
+        <section
+            id="verification-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Verify your email</h2>
+
+            <p class="auth-description">
+                Check your email and open the verification link
+                before logging in.
+            </p>
+
+            <p>
+                Verification email sent to
+                <strong id="verification-email">--</strong>
+            </p>
+
+            <button
+                type="button"
+                id="resend-verification-button"
+            >
+                Resend verification email
+            </button>
+
+            <p
+                id="verification-message"
+                class="form-message"
+            ></p>
+
+            <button
+                type="button"
+                id="verification-to-login"
+                class="text-button"
+            >
+                Back to login
             </button>
 
         </section>

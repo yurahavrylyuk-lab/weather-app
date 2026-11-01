@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+from datetime import timedelta
+from action_tokens import consume_action_token, create_action_token
 import os
 
 import jwt
@@ -20,7 +22,8 @@ from auth import (
     normalize_email,
 )
 from database import create_db_and_tables, get_session
-from models import User, UserCreate, UserPublic, UserUpdate
+from email_service import send_verification_email
+from models import EmailRequest, EmailTokenRequest, User, UserCreate, UserPublic, UserUpdate
 
 from aviation import (
     fetch_nearby_metars,
@@ -100,7 +103,88 @@ def register_user(
     session.commit()
     session.refresh(user)
 
+    verification_token = create_action_token(
+        session,
+        user,
+        purpose="verify_email",
+        expires_in=timedelta(hours=24),
+    )
+
+    send_verification_email(
+        user.email,
+        verification_token,
+    )
+
     return user
+
+
+@app.post("/api/email/resend-verification")
+def resend_verification_email(
+    request: EmailRequest,
+    session: Session = Depends(get_session),
+):
+    normalized_email = normalize_email(request.email)
+
+    user = session.exec(
+        select(User).where(User.email == normalized_email)
+    ).first()
+
+    if (
+        user is not None
+        and user.email is not None
+        and not user.email_verified
+    ):
+        verification_token = create_action_token(
+            session,
+            user,
+            purpose="verify_email",
+            expires_in=timedelta(hours=24),
+        )
+
+        send_verification_email(
+            user.email,
+            verification_token,
+        )
+
+    return {
+        "message": (
+            "If an unverified account exists, "
+            "a verification email has been sent"
+        )
+    }
+
+
+@app.post("/api/email/verify")
+def verify_email(
+    request: EmailTokenRequest,
+    session: Session = Depends(get_session),
+):
+    action_token = consume_action_token(
+        session,
+        request.token,
+        purpose="verify_email",
+    )
+
+    if action_token is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired verification token",
+        )
+
+    user = session.get(User, action_token.user_id)
+
+    if user is None or user.email is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired verification token",
+        )
+
+    user.email_verified = True
+
+    session.add(user)
+    session.commit()
+
+    return {"message": "Email verified"}
 
 
 @app.post("/api/token")

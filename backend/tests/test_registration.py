@@ -1,10 +1,21 @@
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+import app as app_module
 from app import app
 from database import create_db_and_tables, create_db_engine, get_session
 from models import User
 from auth import verify_password
+
+
+@pytest.fixture(autouse=True)
+def stub_verification_email(monkeypatch):
+    monkeypatch.setattr(
+        app_module,
+        "send_verification_email",
+        lambda email, token: None,
+    )
 
 
 def test_register_creates_user_with_hashed_password(tmp_path):

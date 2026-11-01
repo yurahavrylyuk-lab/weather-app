@@ -50,3 +50,38 @@ def test_frontend_supports_persistent_login():
 
     # Short-lived access JWT remains session-only.
     assert "sessionStorage" in auth_script
+
+
+def test_frontend_supports_email_registration_and_verification_ui():
+    index = (FRONTEND / "index.html").read_text()
+    auth_script = (FRONTEND / "auth.js").read_text()
+
+    assert 'id="register-email"' in index
+    assert 'type="email"' in index
+
+    assert 'id="verification-panel"' in index
+    assert 'id="verification-email"' in index
+    assert 'id="resend-verification-button"' in index
+    assert 'id="verification-message"' in index
+
+    assert "Username or email" in index
+
+    assert "register-email" in auth_script
+    assert "email," in auth_script
+
+    # New users must verify before they can log in.
+    assert "Check your email" in auth_script
+    assert "showVerificationPanel" in auth_script
+
+
+def test_frontend_handles_verification_links_and_resend():
+    auth_script = (FRONTEND / "auth.js").read_text()
+
+    assert "verify_email_token" in auth_script
+    assert "/api/email/verify" in auth_script
+    assert "/api/email/resend-verification" in auth_script
+
+    assert "URLSearchParams" in auth_script
+    assert "history.replaceState" in auth_script
+
+    assert "resend-verification-button" in auth_script

@@ -47,3 +47,11 @@ class UserPublic(SQLModel):
 
 class UserUpdate(SQLModel):
     preferred_city: str = Field(min_length=1, max_length=100)
+
+
+class EmailTokenRequest(SQLModel):
+    token: str = Field(min_length=1)
+
+
+class EmailRequest(SQLModel):
+    email: str = Field(min_length=3, max_length=320)

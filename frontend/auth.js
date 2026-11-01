@@ -29,6 +29,9 @@ const registerPanel =
 const profilePanel =
     document.getElementById("profile-panel");
 
+const verificationPanel =
+    document.getElementById("verification-panel");
+
 
 function getAccessToken() {
     return sessionStorage.getItem(TOKEN_KEY);
@@ -163,6 +166,7 @@ function showAuthenticatedAccount(user) {
 function hideAuthPanels() {
     loginPanel.hidden = true;
     registerPanel.hidden = true;
+    verificationPanel.hidden = true;
     profilePanel.hidden = true;
 }
 
@@ -183,6 +187,20 @@ function openAuthPanel(panel) {
 function closeAuthDialog() {
     authDialog.close();
     hideAuthPanels();
+}
+
+
+function showVerificationPanel(email) {
+    document.getElementById(
+        "verification-email"
+    ).textContent = email;
+
+    document.getElementById(
+        "verification-message"
+    ).textContent =
+        "Check your email for the verification link.";
+
+    openAuthPanel(verificationPanel);
 }
 
 
@@ -345,6 +363,14 @@ document
 
 
 document
+    .getElementById("verification-to-login")
+    .addEventListener(
+        "click",
+        () => openAuthPanel(loginPanel)
+    );
+
+
+document
     .getElementById("logout-button")
     .addEventListener(
         "click",
@@ -435,6 +461,11 @@ document
                     "register-username"
                 ).value.trim();
 
+            const email =
+                document.getElementById(
+                    "register-email"
+                ).value.trim();
+
             const password =
                 document.getElementById(
                     "register-password"
@@ -459,6 +490,7 @@ document
                         },
                         body: JSON.stringify({
                             username,
+                            email,
                             password,
                             preferred_city:
                                 preferredCity
@@ -469,7 +501,7 @@ document
                 if (!response.ok) {
                     if (response.status === 409) {
                         throw new Error(
-                            "Username is already registered."
+                            "Username or email is already registered."
                         );
                     }
 
@@ -478,24 +510,62 @@ document
                     );
                 }
 
-                const user = await login(
-                    username,
-                    password
+                message.textContent = "";
+
+                document.getElementById(
+                    "register-form"
+                ).reset();
+
+                showVerificationPanel(email);
+
+            } catch (error) {
+                message.textContent =
+                    error.message;
+            }
+        }
+    );
+
+
+document
+    .getElementById("resend-verification-button")
+    .addEventListener(
+        "click",
+        async () => {
+            const email =
+                document.getElementById(
+                    "verification-email"
+                ).textContent.trim();
+
+            const message =
+                document.getElementById(
+                    "verification-message"
                 );
 
-                if (!user) {
+            message.textContent = "Sending...";
+
+            try {
+                const response = await fetch(
+                    "/api/email/resend-verification",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            email
+                        })
+                    }
+                );
+
+                if (!response.ok) {
                     throw new Error(
-                        "Account created, but login failed."
+                        "Could not resend verification email."
                     );
                 }
 
-                message.textContent = "";
-
-                closeAuthDialog();
-
-                showPreferredCity(
-                    user.preferred_city
-                );
+                message.textContent =
+                    "Check your email. A new verification link was sent.";
 
             } catch (error) {
                 message.textContent =
@@ -569,6 +639,72 @@ document
     );
 
 
+async function handleEmailVerificationLink() {
+    const params =
+        new URLSearchParams(window.location.search);
+
+    const token =
+        params.get("verify_email_token");
+
+    if (!token) {
+        return;
+    }
+
+    params.delete("verify_email_token");
+
+    const remainingQuery =
+        params.toString();
+
+    const cleanUrl =
+        window.location.pathname +
+        (remainingQuery ? `?${remainingQuery}` : "") +
+        window.location.hash;
+
+    history.replaceState(
+        {},
+        document.title,
+        cleanUrl
+    );
+
+    try {
+        const response = await fetch(
+            "/api/email/verify",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body: JSON.stringify({
+                    token
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                "Verification link is invalid or expired."
+            );
+        }
+
+        document.getElementById(
+            "login-message"
+        ).textContent =
+            "Email verified. You can now log in.";
+
+        openAuthPanel(loginPanel);
+
+    } catch (error) {
+        document.getElementById(
+            "login-message"
+        ).textContent =
+            error.message;
+
+        openAuthPanel(loginPanel);
+    }
+}
+
+
 async function restoreSession() {
     try {
         const user = await fetchCurrentUser();
@@ -591,5 +727,12 @@ async function restoreSession() {
 }
 
 
-showGuestAccount();
-restoreSession();
+async function initializeAuth() {
+    showGuestAccount();
+
+    await handleEmailVerificationLink();
+    await restoreSession();
+}
+
+
+initializeAuth();
