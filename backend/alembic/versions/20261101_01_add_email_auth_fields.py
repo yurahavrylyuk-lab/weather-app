@@ -45,70 +45,74 @@ def upgrade():
             ["email"],
         )
 
-    op.create_table(
-        "auth_action_tokens",
-        sa.Column(
-            "id",
-            sa.Integer(),
-            primary_key=True,
-        ),
-        sa.Column(
-            "user_id",
-            sa.Integer(),
-            sa.ForeignKey("user.id"),
-            nullable=False,
-        ),
-        sa.Column(
-            "token_hash",
-            sa.String(),
-            nullable=False,
-        ),
-        sa.Column(
-            "purpose",
-            sa.String(),
-            nullable=False,
-        ),
-        sa.Column(
-            "target_email",
-            sa.String(),
-            nullable=True,
-        ),
-        sa.Column(
-            "expires_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-        ),
-        sa.Column(
-            "used_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-        ),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-    )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
 
-    op.create_index(
-        "ix_auth_action_tokens_user_id",
-        "auth_action_tokens",
-        ["user_id"],
-    )
+    if "auth_action_tokens" not in inspector.get_table_names():
+        op.create_table(
+            "auth_action_tokens",
+            sa.Column(
+                "id",
+                sa.Integer(),
+                primary_key=True,
+            ),
+            sa.Column(
+                "user_id",
+                sa.Integer(),
+                sa.ForeignKey("user.id"),
+                nullable=False,
+            ),
+            sa.Column(
+                "token_hash",
+                sa.String(),
+                nullable=False,
+            ),
+            sa.Column(
+                "purpose",
+                sa.String(),
+                nullable=False,
+            ),
+            sa.Column(
+                "target_email",
+                sa.String(),
+                nullable=True,
+            ),
+            sa.Column(
+                "expires_at",
+                sa.DateTime(timezone=True),
+                nullable=False,
+            ),
+            sa.Column(
+                "used_at",
+                sa.DateTime(timezone=True),
+                nullable=True,
+            ),
+            sa.Column(
+                "created_at",
+                sa.DateTime(timezone=True),
+                nullable=False,
+                server_default=sa.func.now(),
+            ),
+        )
 
-    op.create_index(
-        "ix_auth_action_tokens_token_hash",
-        "auth_action_tokens",
-        ["token_hash"],
-        unique=True,
-    )
+        op.create_index(
+            "ix_auth_action_tokens_user_id",
+            "auth_action_tokens",
+            ["user_id"],
+        )
 
-    op.create_index(
-        "ix_auth_action_tokens_purpose",
-        "auth_action_tokens",
-        ["purpose"],
-    )
+        op.create_index(
+            "ix_auth_action_tokens_token_hash",
+            "auth_action_tokens",
+            ["token_hash"],
+            unique=True,
+        )
+
+        op.create_index(
+            "ix_auth_action_tokens_purpose",
+            "auth_action_tokens",
+            ["purpose"],
+        )
 
 
 def downgrade():
@@ -116,10 +120,12 @@ def downgrade():
         "ix_auth_action_tokens_purpose",
         table_name="auth_action_tokens",
     )
+
     op.drop_index(
         "ix_auth_action_tokens_token_hash",
         table_name="auth_action_tokens",
     )
+
     op.drop_index(
         "ix_auth_action_tokens_user_id",
         table_name="auth_action_tokens",
