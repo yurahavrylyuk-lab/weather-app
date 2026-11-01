@@ -114,3 +114,26 @@ def test_frontend_supports_password_reset_link():
     assert "reset_password_token" in auth_script
     assert "/api/password-reset/confirm" in auth_script
     assert "history.replaceState" in auth_script
+
+
+def test_frontend_supports_email_change_in_profile():
+    index = (FRONTEND / "index.html").read_text()
+    auth_script = (FRONTEND / "auth.js").read_text()
+
+    assert 'id="profile-email"' in index
+    assert 'id="change-email-form"' in index
+    assert 'id="change-email-new"' in index
+    assert 'id="change-email-password"' in index
+    assert 'id="change-email-message"' in index
+
+    assert "/api/users/me/email" in auth_script
+    assert "change-email-form" in auth_script
+    assert "profile-email" in auth_script
+
+
+def test_frontend_handles_email_change_confirmation_link():
+    auth_script = (FRONTEND / "auth.js").read_text()
+
+    assert "change_email_token" in auth_script
+    assert "/api/email/confirm-change" in auth_script
+    assert "history.replaceState" in auth_script

@@ -353,7 +353,16 @@ document
             ).value = currentUser.preferred_city;
 
             document.getElementById(
+                "profile-email"
+            ).textContent =
+                currentUser.email || "Not set";
+
+            document.getElementById(
                 "profile-message"
+            ).textContent = "";
+
+            document.getElementById(
+                "change-email-message"
             ).textContent = "";
 
             openAuthPanel(profilePanel);
@@ -740,6 +749,88 @@ document
 
 
 document
+    .getElementById("change-email-form")
+    .addEventListener(
+        "submit",
+        async (event) => {
+            event.preventDefault();
+
+            const newEmail =
+                document.getElementById(
+                    "change-email-new"
+                ).value.trim();
+
+            const currentPassword =
+                document.getElementById(
+                    "change-email-password"
+                ).value;
+
+            const message =
+                document.getElementById(
+                    "change-email-message"
+                );
+
+            message.textContent =
+                "Sending verification email...";
+
+            try {
+                const response =
+                    await authenticatedFetch(
+                        "/api/users/me/email",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body: JSON.stringify({
+                                new_email: newEmail,
+                                current_password:
+                                    currentPassword
+                            })
+                        }
+                    );
+
+                if (!response) {
+                    throw new Error(
+                        "Your session has expired. Please log in again."
+                    );
+                }
+
+                if (!response.ok) {
+                    if (response.status === 409) {
+                        throw new Error(
+                            "That email address is already registered."
+                        );
+                    }
+
+                    if (response.status === 400) {
+                        throw new Error(
+                            "Current password is incorrect."
+                        );
+                    }
+
+                    throw new Error(
+                        "Could not start email change."
+                    );
+                }
+
+                document.getElementById(
+                    "change-email-form"
+                ).reset();
+
+                message.textContent =
+                    "Check your new email to confirm the change.";
+
+            } catch (error) {
+                message.textContent =
+                    error.message;
+            }
+        }
+    );
+
+
+document
     .getElementById("profile-form")
     .addEventListener(
         "submit",
@@ -842,6 +933,74 @@ function handlePasswordResetLink() {
 }
 
 
+async function handleEmailChangeLink() {
+    const params =
+        new URLSearchParams(window.location.search);
+
+    const token =
+        params.get("change_email_token");
+
+    if (!token) {
+        return false;
+    }
+
+    params.delete("change_email_token");
+
+    const remainingQuery =
+        params.toString();
+
+    const cleanUrl =
+        window.location.pathname +
+        (remainingQuery ? `?${remainingQuery}` : "") +
+        window.location.hash;
+
+    history.replaceState(
+        {},
+        document.title,
+        cleanUrl
+    );
+
+    try {
+        const response = await fetch(
+            "/api/email/confirm-change",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body: JSON.stringify({
+                    token
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                "Email change link is invalid or expired."
+            );
+        }
+
+        document.getElementById(
+            "login-message"
+        ).textContent =
+            "Email changed successfully.";
+
+        openAuthPanel(loginPanel);
+
+    } catch (error) {
+        document.getElementById(
+            "login-message"
+        ).textContent =
+            error.message;
+
+        openAuthPanel(loginPanel);
+    }
+
+    return true;
+}
+
+
 async function handleEmailVerificationLink() {
     const params =
         new URLSearchParams(window.location.search);
@@ -937,6 +1096,13 @@ async function initializeAuth() {
         handlePasswordResetLink();
 
     if (handlingPasswordReset) {
+        return;
+    }
+
+    const handlingEmailChange =
+        await handleEmailChangeLink();
+
+    if (handlingEmailChange) {
         return;
     }
 

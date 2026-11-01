@@ -679,6 +679,11 @@
                 <strong id="profile-username">--</strong>
             </p>
 
+            <p>
+                Email:
+                <strong id="profile-email">--</strong>
+            </p>
+
             <form id="profile-form">
 
                 <label>
@@ -700,6 +705,52 @@
 
             <p
                 id="profile-message"
+                class="form-message"
+            ></p>
+
+            <hr>
+
+            <h3>Change email</h3>
+
+            <p class="auth-description">
+                Your current email stays active until you verify
+                the new address.
+            </p>
+
+            <form id="change-email-form">
+
+                <label>
+                    New email
+
+                    <input
+                        type="email"
+                        id="change-email-new"
+                        maxlength="320"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Current password
+
+                    <input
+                        type="password"
+                        id="change-email-password"
+                        maxlength="128"
+                        autocomplete="current-password"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Change email
+                </button>
+
+            </form>
+
+            <p
+                id="change-email-message"
                 class="form-message"
             ></p>
 

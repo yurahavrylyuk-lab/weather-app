@@ -21,12 +21,14 @@ from auth import (
     hash_password,
     normalize_email,
 )
+from auth import verify_password
 from database import create_db_and_tables, get_session
+from email_service import send_email_change_verification
 from email_service import (
     send_password_reset_email,
     send_verification_email,
 )
-from models import EmailRequest, EmailTokenRequest, PasswordResetConfirm, User, UserCreate, UserPublic, UserUpdate
+from models import EmailChangeRequest, EmailRequest, EmailTokenRequest, PasswordResetConfirm, User, UserCreate, UserPublic, UserUpdate
 
 from aviation import (
     fetch_nearby_metars,
@@ -119,6 +121,124 @@ def register_user(
     )
 
     return user
+
+
+@app.post("/api/users/me/email")
+def request_email_change(
+    request: EmailChangeRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if not verify_password(
+        request.current_password,
+        current_user.hashed_password,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Current password is incorrect",
+        )
+
+    normalized_email = normalize_email(
+        request.new_email
+    )
+
+    existing_user = session.exec(
+        select(User).where(
+            User.email == normalized_email
+        )
+    ).first()
+
+    if (
+        existing_user is not None
+        and existing_user.id != current_user.id
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered",
+        )
+
+    if normalized_email == current_user.email:
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered",
+        )
+
+    token = create_action_token(
+        session,
+        current_user,
+        purpose="change_email",
+        expires_in=timedelta(hours=1),
+        target_email=normalized_email,
+    )
+
+    send_email_change_verification(
+        normalized_email,
+        token,
+    )
+
+    return {
+        "message": (
+            "Check your new email to confirm the change"
+        )
+    }
+
+
+@app.post("/api/email/confirm-change")
+def confirm_email_change(
+    request: EmailTokenRequest,
+    session: Session = Depends(get_session),
+):
+    action_token = consume_action_token(
+        session,
+        request.token,
+        purpose="change_email",
+    )
+
+    if (
+        action_token is None
+        or action_token.target_email is None
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired email change token",
+        )
+
+    user = session.get(
+        User,
+        action_token.user_id,
+    )
+
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired email change token",
+        )
+
+    existing_user = session.exec(
+        select(User).where(
+            User.email == action_token.target_email
+        )
+    ).first()
+
+    if (
+        existing_user is not None
+        and existing_user.id != user.id
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered",
+        )
+
+    user.email = action_token.target_email
+    user.email_verified = True
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return {
+        "message": "Email changed successfully"
+    }
 
 
 @app.post("/api/password-reset/request")
