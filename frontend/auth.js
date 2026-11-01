@@ -1,6 +1,7 @@
 const TOKEN_KEY = "weatherAppAccessToken";
 
 let currentUser = null;
+let passwordResetToken = null;
 
 const accountButton =
     document.getElementById("account-button");
@@ -31,6 +32,12 @@ const profilePanel =
 
 const verificationPanel =
     document.getElementById("verification-panel");
+
+const forgotPasswordPanel =
+    document.getElementById("forgot-password-panel");
+
+const resetPasswordPanel =
+    document.getElementById("reset-password-panel");
 
 
 function getAccessToken() {
@@ -167,6 +174,8 @@ function hideAuthPanels() {
     loginPanel.hidden = true;
     registerPanel.hidden = true;
     verificationPanel.hidden = true;
+    forgotPasswordPanel.hidden = true;
+    resetPasswordPanel.hidden = true;
     profilePanel.hidden = true;
 }
 
@@ -313,6 +322,20 @@ document
 
 
 document
+    .getElementById("forgot-password-button")
+    .addEventListener(
+        "click",
+        () => {
+            document.getElementById(
+                "forgot-password-message"
+            ).textContent = "";
+
+            openAuthPanel(forgotPasswordPanel);
+        }
+    );
+
+
+document
     .getElementById("open-profile-button")
     .addEventListener(
         "click",
@@ -364,6 +387,14 @@ document
 
 document
     .getElementById("verification-to-login")
+    .addEventListener(
+        "click",
+        () => openAuthPanel(loginPanel)
+    );
+
+
+document
+    .getElementById("forgot-password-to-login")
     .addEventListener(
         "click",
         () => openAuthPanel(loginPanel)
@@ -527,6 +558,59 @@ document
 
 
 document
+    .getElementById("forgot-password-form")
+    .addEventListener(
+        "submit",
+        async (event) => {
+            event.preventDefault();
+
+            const email =
+                document.getElementById(
+                    "forgot-password-email"
+                ).value.trim();
+
+            const message =
+                document.getElementById(
+                    "forgot-password-message"
+                );
+
+            message.textContent =
+                "Sending reset instructions...";
+
+            try {
+                const response = await fetch(
+                    "/api/password-reset/request",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            email
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Could not request password reset."
+                    );
+                }
+
+                message.textContent =
+                    "If a verified account exists for that email, " +
+                    "password reset instructions have been sent.";
+
+            } catch (error) {
+                message.textContent =
+                    error.message;
+            }
+        }
+    );
+
+
+document
     .getElementById("resend-verification-button")
     .addEventListener(
         "click",
@@ -566,6 +650,86 @@ document
 
                 message.textContent =
                     "Check your email. A new verification link was sent.";
+
+            } catch (error) {
+                message.textContent =
+                    error.message;
+            }
+        }
+    );
+
+
+document
+    .getElementById("reset-password-form")
+    .addEventListener(
+        "submit",
+        async (event) => {
+            event.preventDefault();
+
+            const message =
+                document.getElementById(
+                    "reset-password-message"
+                );
+
+            const newPassword =
+                document.getElementById(
+                    "reset-password-new"
+                ).value;
+
+            const confirmation =
+                document.getElementById(
+                    "reset-password-confirm"
+                ).value;
+
+            if (newPassword !== confirmation) {
+                message.textContent =
+                    "Passwords do not match.";
+                return;
+            }
+
+            if (!passwordResetToken) {
+                message.textContent =
+                    "Password reset link is invalid or expired.";
+                return;
+            }
+
+            message.textContent =
+                "Resetting password...";
+
+            try {
+                const response = await fetch(
+                    "/api/password-reset/confirm",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            token: passwordResetToken,
+                            new_password: newPassword
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Password reset link is invalid or expired."
+                    );
+                }
+
+                passwordResetToken = null;
+
+                document.getElementById(
+                    "reset-password-form"
+                ).reset();
+
+                document.getElementById(
+                    "login-message"
+                ).textContent =
+                    "Password reset successful. You can now log in.";
+
+                openAuthPanel(loginPanel);
 
             } catch (error) {
                 message.textContent =
@@ -637,6 +801,45 @@ document
             }
         }
     );
+
+
+function handlePasswordResetLink() {
+    const params =
+        new URLSearchParams(window.location.search);
+
+    const token =
+        params.get("reset_password_token");
+
+    if (!token) {
+        return false;
+    }
+
+    passwordResetToken = token;
+
+    params.delete("reset_password_token");
+
+    const remainingQuery =
+        params.toString();
+
+    const cleanUrl =
+        window.location.pathname +
+        (remainingQuery ? `?${remainingQuery}` : "") +
+        window.location.hash;
+
+    history.replaceState(
+        {},
+        document.title,
+        cleanUrl
+    );
+
+    document.getElementById(
+        "reset-password-message"
+    ).textContent = "";
+
+    openAuthPanel(resetPasswordPanel);
+
+    return true;
+}
 
 
 async function handleEmailVerificationLink() {
@@ -729,6 +932,13 @@ async function restoreSession() {
 
 async function initializeAuth() {
     showGuestAccount();
+
+    const handlingPasswordReset =
+        handlePasswordResetLink();
+
+    if (handlingPasswordReset) {
+        return;
+    }
 
     await handleEmailVerificationLink();
     await restoreSession();

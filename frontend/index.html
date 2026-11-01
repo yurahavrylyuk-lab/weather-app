@@ -420,11 +420,120 @@
 
             <button
                 type="button"
+                id="forgot-password-button"
+                class="text-button"
+            >
+                Forgot password?
+            </button>
+
+            <button
+                type="button"
                 id="switch-to-register"
                 class="text-button"
             >
                 Don't have an account? Register
             </button>
+
+        </section>
+
+
+        <section
+            id="forgot-password-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Forgot password</h2>
+
+            <p class="auth-description">
+                Enter your verified email address.
+                If an account exists, we will send reset instructions.
+            </p>
+
+            <form id="forgot-password-form">
+
+                <label>
+                    Email
+
+                    <input
+                        type="email"
+                        id="forgot-password-email"
+                        maxlength="320"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Send reset link
+                </button>
+
+            </form>
+
+            <p
+                id="forgot-password-message"
+                class="form-message"
+            ></p>
+
+            <button
+                type="button"
+                id="forgot-password-to-login"
+                class="text-button"
+            >
+                Back to login
+            </button>
+
+        </section>
+
+
+        <section
+            id="reset-password-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Reset password</h2>
+
+            <p class="auth-description">
+                Choose a new password for your account.
+            </p>
+
+            <form id="reset-password-form">
+
+                <label>
+                    New password
+
+                    <input
+                        type="password"
+                        id="reset-password-new"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Confirm new password
+
+                    <input
+                        type="password"
+                        id="reset-password-confirm"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Reset password
+                </button>
+
+            </form>
+
+            <p
+                id="reset-password-message"
+                class="form-message"
+            ></p>
 
         </section>
 

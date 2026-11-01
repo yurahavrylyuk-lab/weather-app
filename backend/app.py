@@ -22,8 +22,11 @@ from auth import (
     normalize_email,
 )
 from database import create_db_and_tables, get_session
-from email_service import send_verification_email
-from models import EmailRequest, EmailTokenRequest, User, UserCreate, UserPublic, UserUpdate
+from email_service import (
+    send_password_reset_email,
+    send_verification_email,
+)
+from models import EmailRequest, EmailTokenRequest, PasswordResetConfirm, User, UserCreate, UserPublic, UserUpdate
 
 from aviation import (
     fetch_nearby_metars,
@@ -116,6 +119,85 @@ def register_user(
     )
 
     return user
+
+
+@app.post("/api/password-reset/request")
+def request_password_reset(
+    request: EmailRequest,
+    session: Session = Depends(get_session),
+):
+    normalized_email = normalize_email(request.email)
+
+    user = session.exec(
+        select(User).where(User.email == normalized_email)
+    ).first()
+
+    if (
+        user is not None
+        and user.email is not None
+        and user.email_verified
+        and user.is_active
+    ):
+        reset_token = create_action_token(
+            session,
+            user,
+            purpose="reset_password",
+            expires_in=timedelta(minutes=30),
+        )
+
+        send_password_reset_email(
+            user.email,
+            reset_token,
+        )
+
+    return {
+        "message": (
+            "If a verified account exists for that email, "
+            "password reset instructions have been sent"
+        )
+    }
+
+
+@app.post("/api/password-reset/confirm")
+def confirm_password_reset(
+    request: PasswordResetConfirm,
+    session: Session = Depends(get_session),
+):
+    action_token = consume_action_token(
+        session,
+        request.token,
+        purpose="reset_password",
+    )
+
+    if action_token is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired password reset token",
+        )
+
+    user = session.get(
+        User,
+        action_token.user_id,
+    )
+
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired password reset token",
+        )
+
+    user.hashed_password = hash_password(
+        request.new_password
+    )
+
+    user.auth_version += 1
+
+    session.add(user)
+    session.commit()
+
+    return {
+        "message": "Password reset successful"
+    }
 
 
 @app.post("/api/email/resend-verification")

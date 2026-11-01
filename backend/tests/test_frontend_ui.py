@@ -85,3 +85,32 @@ def test_frontend_handles_verification_links_and_resend():
     assert "history.replaceState" in auth_script
 
     assert "resend-verification-button" in auth_script
+
+
+def test_frontend_supports_forgot_password_ui():
+    index = (FRONTEND / "index.html").read_text()
+    auth_script = (FRONTEND / "auth.js").read_text()
+
+    assert 'id="forgot-password-button"' in index
+    assert 'id="forgot-password-panel"' in index
+    assert 'id="forgot-password-form"' in index
+    assert 'id="forgot-password-email"' in index
+    assert 'id="forgot-password-message"' in index
+
+    assert "/api/password-reset/request" in auth_script
+    assert "forgot-password-form" in auth_script
+
+
+def test_frontend_supports_password_reset_link():
+    index = (FRONTEND / "index.html").read_text()
+    auth_script = (FRONTEND / "auth.js").read_text()
+
+    assert 'id="reset-password-panel"' in index
+    assert 'id="reset-password-form"' in index
+    assert 'id="reset-password-new"' in index
+    assert 'id="reset-password-confirm"' in index
+    assert 'id="reset-password-message"' in index
+
+    assert "reset_password_token" in auth_script
+    assert "/api/password-reset/confirm" in auth_script
+    assert "history.replaceState" in auth_script
