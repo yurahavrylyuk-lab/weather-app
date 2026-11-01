@@ -1203,3 +1203,27 @@ a {
         padding: 24px 20px;
     }
 }
+
+/* Login secondary actions */
+.login-links {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.login-links .text-button {
+    margin: 0;
+}
+
+.register-prompt {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.register-prompt span {
+    color: #b8c0cf;
+}

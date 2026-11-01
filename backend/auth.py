@@ -36,13 +36,23 @@ def verify_password(
     )
 
 
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
 def authenticate_user(
     session: Session,
-    username: str,
+    identifier: str,
     password: str
 ) -> User | None:
+    identifier = identifier.strip()
+    normalized_email = normalize_email(identifier)
+
     user = session.exec(
-        select(User).where(User.username == username)
+        select(User).where(
+            (User.username == identifier)
+            | (User.email == normalized_email)
+        )
     ).first()
 
     if user is None:
@@ -54,10 +64,16 @@ def authenticate_user(
     ):
         return None
 
+    if user.email is not None and not user.email_verified:
+        return None
+
     return user
 
 
-def create_access_token(username: str) -> str:
+def create_access_token(
+    username: str,
+    auth_version: int = 1
+) -> str:
     secret_key = os.getenv("JWT_SECRET_KEY")
     if not secret_key:
         raise RuntimeError("JWT_SECRET_KEY is not configured")
@@ -68,12 +84,16 @@ def create_access_token(username: str) -> str:
     payload = {
         "sub": username,
         "type": "access",
+        "auth_version": auth_version,
         "exp": expires_at,
     }
     return jwt.encode(payload, secret_key, algorithm=ALGORITHM)
 
 
-def create_refresh_token(username: str) -> str:
+def create_refresh_token(
+    username: str,
+    auth_version: int = 1
+) -> str:
     secret_key = os.getenv("JWT_SECRET_KEY")
     if not secret_key:
         raise RuntimeError("JWT_SECRET_KEY is not configured")
@@ -84,6 +104,7 @@ def create_refresh_token(username: str) -> str:
     payload = {
         "sub": username,
         "type": "refresh",
+        "auth_version": auth_version,
         "exp": expires_at,
     }
     return jwt.encode(payload, secret_key, algorithm=ALGORITHM)
@@ -114,7 +135,12 @@ def get_current_user(
             raise credentials_exception
 
         username = payload.get("sub")
+        auth_version = payload.get("auth_version")
+
         if username is None:
+            raise credentials_exception
+
+        if type(auth_version) is not int:
             raise credentials_exception
 
     except jwt.InvalidTokenError:
@@ -125,6 +151,9 @@ def get_current_user(
     ).first()
 
     if user is None:
+        raise credentials_exception
+
+    if user.auth_version != auth_version:
         raise credentials_exception
 
     return user

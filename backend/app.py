@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+from datetime import timedelta
+from action_tokens import consume_action_token, create_action_token
 import os
 
 import jwt
@@ -17,9 +19,16 @@ from auth import (
     create_refresh_token,
     get_current_user,
     hash_password,
+    normalize_email,
 )
+from auth import verify_password
 from database import create_db_and_tables, get_session
-from models import User, UserCreate, UserPublic, UserUpdate
+from email_service import send_email_change_verification
+from email_service import (
+    send_password_reset_email,
+    send_verification_email,
+)
+from models import EmailChangeRequest, EmailRequest, EmailTokenRequest, PasswordChangeRequest, PasswordResetConfirm, User, UserCreate, UserPublic, UserUpdate
 
 from aviation import (
     fetch_nearby_metars,
@@ -75,8 +84,22 @@ def register_user(
             detail="Username already registered"
         )
 
+    normalized_email = normalize_email(user_data.email)
+
+    existing_email = session.exec(
+        select(User).where(User.email == normalized_email)
+    ).first()
+
+    if existing_email:
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered"
+        )
+
     user = User(
         username=user_data.username,
+        email=normalized_email,
+        email_verified=False,
         hashed_password=hash_password(user_data.password),
         preferred_city=user_data.preferred_city
     )
@@ -85,7 +108,347 @@ def register_user(
     session.commit()
     session.refresh(user)
 
+    verification_token = create_action_token(
+        session,
+        user,
+        purpose="verify_email",
+        expires_in=timedelta(hours=24),
+    )
+
+    send_verification_email(
+        user.email,
+        verification_token,
+    )
+
     return user
+
+
+@app.post("/api/users/me/password")
+def change_password(
+    request: PasswordChangeRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if not verify_password(
+        request.current_password,
+        current_user.hashed_password,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Current password is incorrect",
+        )
+
+    if (
+        request.new_password
+        != request.new_password_confirmation
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="New passwords do not match",
+        )
+
+    current_user.hashed_password = hash_password(
+        request.new_password
+    )
+
+    current_user.auth_version += 1
+
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    access_token = create_access_token(
+        current_user.username,
+        auth_version=current_user.auth_version,
+    )
+
+    refresh_token = create_refresh_token(
+        current_user.username,
+        auth_version=current_user.auth_version,
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=os.getenv("VERCEL_ENV")
+        in {"production", "preview"},
+        samesite="lax",
+        path="/api",
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+    }
+
+
+@app.post("/api/users/me/email")
+def request_email_change(
+    request: EmailChangeRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if not verify_password(
+        request.current_password,
+        current_user.hashed_password,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Current password is incorrect",
+        )
+
+    normalized_email = normalize_email(
+        request.new_email
+    )
+
+    existing_user = session.exec(
+        select(User).where(
+            User.email == normalized_email
+        )
+    ).first()
+
+    if (
+        existing_user is not None
+        and existing_user.id != current_user.id
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered",
+        )
+
+    if normalized_email == current_user.email:
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered",
+        )
+
+    token = create_action_token(
+        session,
+        current_user,
+        purpose="change_email",
+        expires_in=timedelta(hours=1),
+        target_email=normalized_email,
+    )
+
+    send_email_change_verification(
+        normalized_email,
+        token,
+    )
+
+    return {
+        "message": (
+            "Check your new email to confirm the change"
+        )
+    }
+
+
+@app.post("/api/email/confirm-change")
+def confirm_email_change(
+    request: EmailTokenRequest,
+    session: Session = Depends(get_session),
+):
+    action_token = consume_action_token(
+        session,
+        request.token,
+        purpose="change_email",
+    )
+
+    if (
+        action_token is None
+        or action_token.target_email is None
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired email change token",
+        )
+
+    user = session.get(
+        User,
+        action_token.user_id,
+    )
+
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired email change token",
+        )
+
+    existing_user = session.exec(
+        select(User).where(
+            User.email == action_token.target_email
+        )
+    ).first()
+
+    if (
+        existing_user is not None
+        and existing_user.id != user.id
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered",
+        )
+
+    user.email = action_token.target_email
+    user.email_verified = True
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return {
+        "message": "Email changed successfully"
+    }
+
+
+@app.post("/api/password-reset/request")
+def request_password_reset(
+    request: EmailRequest,
+    session: Session = Depends(get_session),
+):
+    normalized_email = normalize_email(request.email)
+
+    user = session.exec(
+        select(User).where(User.email == normalized_email)
+    ).first()
+
+    if (
+        user is not None
+        and user.email is not None
+        and user.email_verified
+        and user.is_active
+    ):
+        reset_token = create_action_token(
+            session,
+            user,
+            purpose="reset_password",
+            expires_in=timedelta(minutes=30),
+        )
+
+        send_password_reset_email(
+            user.email,
+            reset_token,
+        )
+
+    return {
+        "message": (
+            "If a verified account exists for that email, "
+            "password reset instructions have been sent"
+        )
+    }
+
+
+@app.post("/api/password-reset/confirm")
+def confirm_password_reset(
+    request: PasswordResetConfirm,
+    session: Session = Depends(get_session),
+):
+    action_token = consume_action_token(
+        session,
+        request.token,
+        purpose="reset_password",
+    )
+
+    if action_token is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired password reset token",
+        )
+
+    user = session.get(
+        User,
+        action_token.user_id,
+    )
+
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired password reset token",
+        )
+
+    user.hashed_password = hash_password(
+        request.new_password
+    )
+
+    user.auth_version += 1
+
+    session.add(user)
+    session.commit()
+
+    return {
+        "message": "Password reset successful"
+    }
+
+
+@app.post("/api/email/resend-verification")
+def resend_verification_email(
+    request: EmailRequest,
+    session: Session = Depends(get_session),
+):
+    normalized_email = normalize_email(request.email)
+
+    user = session.exec(
+        select(User).where(User.email == normalized_email)
+    ).first()
+
+    if (
+        user is not None
+        and user.email is not None
+        and not user.email_verified
+    ):
+        verification_token = create_action_token(
+            session,
+            user,
+            purpose="verify_email",
+            expires_in=timedelta(hours=24),
+        )
+
+        send_verification_email(
+            user.email,
+            verification_token,
+        )
+
+    return {
+        "message": (
+            "If an unverified account exists, "
+            "a verification email has been sent"
+        )
+    }
+
+
+@app.post("/api/email/verify")
+def verify_email(
+    request: EmailTokenRequest,
+    session: Session = Depends(get_session),
+):
+    action_token = consume_action_token(
+        session,
+        request.token,
+        purpose="verify_email",
+    )
+
+    if action_token is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired verification token",
+        )
+
+    user = session.get(User, action_token.user_id)
+
+    if user is None or user.email is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired verification token",
+        )
+
+    user.email_verified = True
+
+    session.add(user)
+    session.commit()
+
+    return {"message": "Email verified"}
 
 
 @app.post("/api/token")
@@ -107,8 +470,14 @@ def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"}
         )
 
-    access_token = create_access_token(user.username)
-    refresh_token = create_refresh_token(user.username)
+    access_token = create_access_token(
+        user.username,
+        auth_version=user.auth_version,
+    )
+    refresh_token = create_refresh_token(
+        user.username,
+        auth_version=user.auth_version,
+    )
 
     response.set_cookie(
         key="refresh_token",
@@ -163,7 +532,9 @@ def refresh_access_token(
         )
 
     username = payload.get("sub")
-    if not username:
+    auth_version = payload.get("auth_version")
+
+    if not username or type(auth_version) is not int:
         raise HTTPException(
             status_code=401,
             detail="Invalid refresh token"
@@ -179,8 +550,20 @@ def refresh_access_token(
             detail="Invalid refresh token"
         )
 
-    new_access_token = create_access_token(user.username)
-    new_refresh_token = create_refresh_token(user.username)
+    if user.auth_version != auth_version:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token"
+        )
+
+    new_access_token = create_access_token(
+        user.username,
+        auth_version=user.auth_version,
+    )
+    new_refresh_token = create_refresh_token(
+        user.username,
+        auth_version=user.auth_version,
+    )
 
     response.set_cookie(
         key="refresh_token",

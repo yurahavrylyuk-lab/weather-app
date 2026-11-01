@@ -388,7 +388,7 @@
             <form id="login-form">
 
                 <label>
-                    Username
+                    Username or email
 
                     <input
                         type="text"
@@ -418,13 +418,128 @@
                 class="form-message"
             ></p>
 
+            <div class="login-links">
+                <button
+                    type="button"
+                    id="forgot-password-button"
+                    class="text-button"
+                >
+                    Forgot password?
+                </button>
+
+                <div class="register-prompt">
+                    <span>Don't have an account?</span>
+
+                    <button
+                        type="button"
+                        id="switch-to-register"
+                        class="text-button"
+                    >
+                        Register
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+
+        <section
+            id="forgot-password-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Forgot password</h2>
+
+            <p class="auth-description">
+                Enter your verified email address.
+                If an account exists, we will send reset instructions.
+            </p>
+
+            <form id="forgot-password-form">
+
+                <label>
+                    Email
+
+                    <input
+                        type="email"
+                        id="forgot-password-email"
+                        maxlength="320"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Send reset link
+                </button>
+
+            </form>
+
+            <p
+                id="forgot-password-message"
+                class="form-message"
+            ></p>
+
             <button
                 type="button"
-                id="switch-to-register"
+                id="forgot-password-to-login"
                 class="text-button"
             >
-                Don't have an account? Register
+                Back to login
             </button>
+
+        </section>
+
+
+        <section
+            id="reset-password-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Reset password</h2>
+
+            <p class="auth-description">
+                Choose a new password for your account.
+            </p>
+
+            <form id="reset-password-form">
+
+                <label>
+                    New password
+
+                    <input
+                        type="password"
+                        id="reset-password-new"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Confirm new password
+
+                    <input
+                        type="password"
+                        id="reset-password-confirm"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Reset password
+                </button>
+
+            </form>
+
+            <p
+                id="reset-password-message"
+                class="form-message"
+            ></p>
 
         </section>
 
@@ -451,6 +566,18 @@
                         id="register-username"
                         minlength="3"
                         maxlength="50"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Email
+
+                    <input
+                        type="email"
+                        id="register-email"
+                        maxlength="320"
+                        autocomplete="email"
                         required
                     >
                 </label>
@@ -502,6 +629,46 @@
 
 
         <section
+            id="verification-panel"
+            class="auth-panel"
+            hidden
+        >
+            <h2>Verify your email</h2>
+
+            <p class="auth-description">
+                Check your email and open the verification link
+                before logging in.
+            </p>
+
+            <p>
+                Verification email sent to
+                <strong id="verification-email">--</strong>
+            </p>
+
+            <button
+                type="button"
+                id="resend-verification-button"
+            >
+                Resend verification email
+            </button>
+
+            <p
+                id="verification-message"
+                class="form-message"
+            ></p>
+
+            <button
+                type="button"
+                id="verification-to-login"
+                class="text-button"
+            >
+                Back to login
+            </button>
+
+        </section>
+
+
+        <section
             id="profile-panel"
             class="auth-panel"
             hidden
@@ -516,6 +683,11 @@
             <p>
                 Signed in as
                 <strong id="profile-username">--</strong>
+            </p>
+
+            <p>
+                Email:
+                <strong id="profile-email">--</strong>
             </p>
 
             <form id="profile-form">
@@ -539,6 +711,107 @@
 
             <p
                 id="profile-message"
+                class="form-message"
+            ></p>
+
+            <hr>
+
+            <h3>Change email</h3>
+
+            <p class="auth-description">
+                Your current email stays active until you verify
+                the new address.
+            </p>
+
+            <form id="change-email-form">
+
+                <label>
+                    New email
+
+                    <input
+                        type="email"
+                        id="change-email-new"
+                        maxlength="320"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Current password
+
+                    <input
+                        type="password"
+                        id="change-email-password"
+                        maxlength="128"
+                        autocomplete="current-password"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Change email
+                </button>
+
+            </form>
+
+            <p
+                id="change-email-message"
+                class="form-message"
+            ></p>
+
+            <hr>
+
+            <h3>Change password</h3>
+
+            <form id="change-password-form">
+
+                <label>
+                    Current password
+
+                    <input
+                        type="password"
+                        id="change-password-current"
+                        maxlength="128"
+                        autocomplete="current-password"
+                        required
+                    >
+                </label>
+
+                <label>
+                    New password
+
+                    <input
+                        type="password"
+                        id="change-password-new"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+                </label>
+
+                <label>
+                    Confirm new password
+
+                    <input
+                        type="password"
+                        id="change-password-confirm"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+                </label>
+
+                <button type="submit">
+                    Change password
+                </button>
+
+            </form>
+
+            <p
+                id="change-password-message"
                 class="form-message"
             ></p>
 
